@@ -1,0 +1,17 @@
+# License: Apache-2.0
+
+---
+
+- name: Adding kubernetes default CIDR to noproxy
+  set_fact:
+    _base_noproxy: "{{ _base_noproxy + ',' + _kubernetes_default_cidr }}"
+
+- name: Adding calico CIDR to noproxy
+  set_fact:
+    _base_noproxy: "{{ _base_noproxy + ',' + calico_cidr }}"
+  when: '"calico" in kubernetes_cnis'
+
+- name: Adding flannel CIDR to noproxy
+  set_fact:
+    _base_noproxy: "{{ _base_noproxy + ',' + flannel_cidr }}"
+  when: '"flannel" in kubernetes_cnis'

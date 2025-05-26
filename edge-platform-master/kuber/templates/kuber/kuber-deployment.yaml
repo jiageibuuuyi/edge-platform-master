@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+# 根据实际环境修改namespace
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    svc: {{ .Values.global.uuid }}-kuber
+    kuber: kuber
+    envType: {{ .Values.initJos.envType }}
+  name: {{ .Values.global.uuid }}-kuber
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.global.uuid }}-kuber
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.global.uuid }}-kuber
+        svc: {{ .Values.global.uuid }}-kuber
+        kuber: kuber
+        envType: {{ .Values.initJos.envType }}
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: node1
+      containers:
+        - name: kuber
+          imagePullPolicy: Always
+# 根据实际部署环境修改image
+          image: {{ .Values.harbor.host }}{{ .Values.image.kuber }}
+          ports:
+            - name: http-0
+              protocol: TCP
+              containerPort: 11468
+          resources:
+            limits:
+              cpu: '4'
+              memory: 4Gi
+            requests:
+              cpu: 10m
+              memory: 10Mi
+          volumeMounts:
+            - name: host-time
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: kuber-config-map
+              mountPath: /opt/kuber/kuber.yaml
+              subPath: kuber.yaml
+            - name: kuber-config-map
+              mountPath: /opt/kuber/dtos-job.yaml
+              subPath: dtos-job.yaml
+            - name: kuber-config-map
+              mountPath: /opt/kuber/app-jenkins.yaml
+              subPath: app-jenkins.yaml
+            - name: kuber-config-map
+              mountPath: /opt/kuber/app-without-test-jenkins.yaml
+              subPath: app-without-test-jenkins.yaml
+            - name: kuber-config-map
+              mountPath: /opt/kuber/app-prod-jenkins.yaml
+              subPath: app-prod-jenkins.yaml
+            - name: kubeadmin
+              mountPath: /opt/kuber/admin.conf
+            - name: kuber-pvc
+              mountPath: /var/log
+              subPath: kuber/log
+            - name: kuber-pvc
+              mountPath: /opt/kuber/export
+              subPath: kuber/export
+            - name: hosts
+              mountPath: /etc/hosts
+      serviceAccount: default
+      volumes:
+        - hostPath:
+            path: /etc/localtime
+          name: host-time
+        - hostPath:
+            path: /etc/kubernetes/admin.conf
+          name: kubeadmin
+        - name: kuber-pvc
+          persistentVolumeClaim:
+            claimName: {{ .Values.global.uuid }}-standalone-pvc
+        - name: kuber-config-map
+          configMap:
+            name: {{ .Values.global.uuid }}-kuber-configmap
+        - name: hosts
+          hostPath:
+            path: /etc/hosts
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%

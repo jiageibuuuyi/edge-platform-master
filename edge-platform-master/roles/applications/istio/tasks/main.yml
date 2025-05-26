@@ -1,0 +1,42 @@
+- name: copy istioctl to master
+  copy:
+    src: "{{ playbook_dir }}/offline_pkgs/bin/istioctl"
+    dest: /usr/bin/
+    mode: '0755'
+  delegate_to: localhost
+
+- name: copy yaml to master
+  template:
+    src: istio-ingress.yaml.j2
+    dest: /tmp/istio-ingress.yaml
+  delegate_to: localhost
+
+- name: copy yaml to master
+  template:
+    src: istio-secret.yaml.j2
+    dest: /tmp/istio-secret.yaml
+  delegate_to: localhost
+
+- name: login harbor hub
+  command: "sealos login -u admin -p {{ harborAdminPassword }} {{ hostCoreName }}"
+
+- name: load istio image
+  shell: >
+    sealos load -i {{ playbook_dir }}/offline_pkgs/images/{{ item[0] }}.tar &&
+    sealos push docker.io/istio/{{ item[0] }}:{{ item[1] }} harbor.joiningos.com/joiningos/{{ item[0] }}:{{ item[1] }}
+  loop:
+  - ["pilot", "1.24.2"]
+  - ["proxyv2", "1.24.2"]
+
+- name: setup istio application
+  shell: >
+    istioctl install --set profile=demo --set hub=harbor.joiningos.com/joiningos -y
+
+- name: apply ingress
+  shell: >
+    kubectl apply -f /tmp/{{ item }} -n istio-system
+  with_items:
+  - istio-secret.yaml
+  - istio-ingress.yaml
+
+- include_tasks: load_kiali.yml

@@ -1,0 +1,11 @@
+# License: Apache-2.0
+
+---
+- name: enable and start docker service
+  systemd:
+    name: docker
+    enabled: yes
+    masked: no
+    state: restarted
+    daemon_reload: yes
+  become: yes

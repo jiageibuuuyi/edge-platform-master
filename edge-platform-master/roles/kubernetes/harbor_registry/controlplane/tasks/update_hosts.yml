@@ -1,0 +1,19 @@
+---
+- name: get harbor endpoint
+  command: kubectl -n ingress-nginx get ep ingress-nginx-controller -o custom-columns=ENDPOINTS:.subsets[0].addresses[0].ip --no-headers
+  register: endpoint
+
+- name: update /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ item.ip }} {{ item.hostname }}"
+    state: present
+    backup: yes
+  with_items: "{{ host_entries }}"
+
+- name: update /etc/hosts for harbor
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ endpoint.stdout }} {{ hostCoreName }}"
+    state: present
+    backup: yes

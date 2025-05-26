@@ -1,0 +1,16 @@
+#!/bin/bash
+
+{% if groups['all'] | length == 2 %}
+{% set host1 = hostvars[groups['all'][0]].ansible_host %}
+{% set host2 = hostvars[groups['all'][1]].ansible_host %}
+{% if host1 == host2 %}
+sealos run {{ playbook_dir }}/offline_pkgs/docker/kubernetes.tar {{ playbook_dir }}/offline_pkgs/docker/calico.tar \
+--masters="{{ hostvars[groups['controller_group'][0]]['ansible_host'] }}" \
+--user="{{ hostvars[groups['edgenode_group'][0]]['ansible_ssh_user'] }}"
+{% else %}
+sealos run {{ playbook_dir }}/offline_pkgs/docker/kubernetes.tar {{ playbook_dir }}/offline_pkgs/docker/calico.tar \
+--masters="{{ hostvars[groups['controller_group'][0]]['ansible_host'] }}" \
+--nodes="{{ groups['edgenode_group'] | map('extract', hostvars, 'ansible_host') | join(',') }}" \
+--user="{{ hostvars[groups['edgenode_group'][0]]['ansible_ssh_user'] }}"
+{% endif %}
+{% endif %}

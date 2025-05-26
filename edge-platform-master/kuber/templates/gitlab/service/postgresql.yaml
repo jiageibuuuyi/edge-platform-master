@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.global.uuid }}-postgresql
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    name: {{ .Values.global.uuid }}-postgresql
+spec:
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+  selector:
+    name: {{ .Values.global.uuid }}-postgresql

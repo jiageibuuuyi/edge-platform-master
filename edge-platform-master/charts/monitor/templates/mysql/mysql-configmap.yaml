@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.global.uuid }}-mysql-configmap
+  namespace: {{ .Values.global.namespace }}
+data:
+  my.cnf: |-
+    [mysqld]
+    max_connections=2000
+    table_open_cache=2000
+    mysqlx_max_connections=2000
+
+  zend.sql: |
+    USE `grafana`;
+
+    UPDATE `grafana`.`data_source` SET `url` = 'http://{{ .Values.global.uuid }}-prometheus.{{ .Values.global.namespace }}.svc.cluster.local:9090' WHERE `id` = 1
+

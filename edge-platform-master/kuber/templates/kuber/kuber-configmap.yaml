@@ -1,0 +1,349 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.global.uuid }}-kuber-configmap
+  namespace: {{ .Values.global.namespace }}
+data:
+  kuber.yaml: |
+    run_mode: debug  # 开发模式, debug, release, test
+    name: kuber # Server名称
+    listen_address: :11468 # 本地的服务端口
+    uuid: {{ .Values.global.uuid }}
+    namespace: {{ .Values.global.namespace }}
+    db:
+      addr: {{ .Values.global.uuid }}-mysql-svc.{{ .Values.global.namespace }}.svc.cluster.local
+      port: 3306
+      user: root
+      password: admin@123!
+      name: kuber
+      log: true
+    logs:
+      log_max_date: 1
+      log_rotate_date: 1
+      console:
+        level: debug
+      access:
+        file: /var/log/kuber/access.log
+      runtime:
+        file: /var/log/kuber/runtime.log
+
+    admin_conf:
+      env_level: release
+      file: /opt/kuber/admin.conf
+
+    harbor:
+      scheme: {{ .Values.harbor.scheme }}
+      host: {{ .Values.harbor.host }}
+      username: {{ .Values.harbor.username }}
+      password: {{ .Values.harbor.password }}
+      namespace: {{ .Values.harbor.namespace }}
+
+    chart:
+      repo_url: {{ .Values.harbor.scheme }}{{ .Values.harbor.host }}/chartrepo/library
+      storageclass: {{ .Values.global.volum.storageClass }}
+      accessModes: {{ .Values.global.volum.accessModes }}
+      image_file: /opt/kuber/image.yaml
+      dtos_job: /opt/kuber/dtos-job.yaml
+
+    servic:
+      signKey: {{ .Values.initJos.signKey }}
+      port:
+        sso_server: 8081
+        joiningOs: 8903
+        gitlab: 80
+        applife: 8082
+
+    jos:
+      ingress:
+        # 需要修改节点标签
+        nodeSelector:
+          key: {{ .Values.ingress.nodeSelector.key }}
+          value: {{ .Values.ingress.nodeSelector.value }}
+      initJos:
+        version: {{ .Values.initJos.version }}
+        network: {{ .Values.initJos.network }}
+        privateCA: {{ .Values.initJos.privateCA }}
+        uuid: {{ .Values.initJos.uuid }}
+        namespace: {{ .Values.initJos.namespace }}
+        sso_auth: {{ .Values.initJos.sso_auth }}.{{ .Values.initJos.hosts }}
+        nodePort: {{ .Values.initJos.nodePort }}
+        envType: {{ .Values.initJos.envType }}
+        source: {{ .Values.initJos.source }}
+      domain:
+        joiningos: {{ .Values.domain.joiningos }}.{{ .Values.initJos.hosts }}
+        user_center: {{ .Values.domain.user_center }}.{{ .Values.initJos.hosts }}
+        big_screen: {{ .Values.domain.big_screen }}.{{ .Values.initJos.hosts }}
+        sso_auth: {{ .Values.domain.sso_auth }}.{{ .Values.initJos.hosts }}
+        minio: {{ .Values.domain.minio }}.{{ .Values.initJos.hosts }}
+        gitlab: {{ .Values.domain.gitlab }}.{{ .Values.initJos.hosts }}
+        grafana: {{ .Values.domain.grafana }}.{{ .Values.initJos.hosts }}
+        kubesphere: {{ .Values.domain.kubesphere }}.{{ .Values.initJos.hosts }}
+        rancher: {{ .Values.domain.rancher }}.{{ .Values.initJos.hosts }}
+        mysql: {{ .Values.domain.mysql }}.{{ .Values.initJos.hosts }}
+        # 低代码能力集
+        low_code: {{ .Values.domain.low_code }}.{{ .Values.initJos.hosts }}
+        # 大数据平台能力集
+        bigdata: {{ .Values.domain.bigdata }}.{{ .Values.initJos.hosts }}
+        # 数字孪生能力集
+        digital_twin: {{ .Values.domain.digital_twin }}.{{ .Values.initJos.hosts }}
+        # 能力开放平台能力集
+        ocp: {{ .Values.domain.ocp }}.{{ .Values.initJos.hosts }}
+        ocp_bootstrap: {{ .Values.domain.ocp_bootstrap }}.{{ .Values.initJos.hosts }}
+        # 设备采集能力集
+        device_gather: {{ .Values.domain.device_gather }}.{{ .Values.initJos.hosts }}
+        # 数据融合能力集
+        data_fusion: {{ .Values.domain.data_fusion }}.{{ .Values.initJos.hosts }}
+        # 人工智能能力集
+        ai: {{ .Values.domain.ai }}.{{ .Values.initJos.hosts }}
+        # 边缘智能计算能力集
+        eic: {{ .Values.domain.eic }}.{{ .Values.initJos.hosts }}
+    devops:
+      ks_endpoint: {{ .Values.devops.ks_endpoint }}
+      endpoint: {{ .Values.devops.endpoint }}
+      username: {{ .Values.devops.username }}
+      password: {{ .Values.devops.password }}
+      jenkins_file:
+          app_jenkins: /opt/kuber/app-jenkins.yaml
+          app_without_test_jenkins: /opt/kuber/app-without-test-jenkins.yaml
+          app_prod_jenkins: /opt/kuber/app-prod-jenkins.yaml
+    gitlab:
+      username: {{ .Values.gitlab.username }}
+      password: {{ .Values.gitlab.password }}
+    tls:
+      crt: {{ .Values.tls.crt }}
+      key: {{ .Values.tls.key }}
+      pem: {{ .Values.tls.pem }}
+  Dockerfile: |
+    FROM {{ .Values.harbor.host }}/library/mysql:8.2.0
+
+    COPY init.sql /docker-entrypoint-initdb.d/
+
+    EXPOSE 3306
+  app-jenkins.yaml: |
+    pipeline {
+      agent {
+        kubernetes {
+          inheritFrom 'maven'
+          yaml '''
+            spec:
+              nodeSelector:
+                kubernetes.io/hostname: {{ .Values.devops.nodeSelector.value }}
+          '''
+        }
+      }
+      environment {
+         BRANCH = '%s'
+         REGISTRY = '%s'
+         HARBOR_NAMESPACE  = '%s'
+         KUBER = '%s'
+         CODE = '%s'
+         WORKSPACEID = '%s'
+         HARBOR_CREDENTIAL = credentials('harbor')
+      }
+      stages {
+        stage('开发') {
+          agent none
+          steps {
+            echo "$BRANCH"
+            git(url: '%s', credentialsId: 'gitlab', branch: "$BRANCH", changelog: true, poll: false)
+            container('maven') {
+              withCredentials([string(credentialsId:'%s',variable:'sonar_token')]){
+                withSonarQubeEnv('sonar') {
+                  sh '''
+                    %s
+                  '''
+                }
+              }
+            }
+            input(message: '代码扫描是否通过？', ok: '通过')
+            container('docker') {
+              sh '''echo $HARBOR_CREDENTIAL_PSW | docker login $REGISTRY -u 'robot$%s' --password-stdin'''
+              sh "docker build -t $REGISTRY/$HARBOR_NAMESPACE:$BRANCH ."
+              sh "docker push $REGISTRY/$HARBOR_NAMESPACE:$BRANCH"
+              sh "docker rmi $REGISTRY/$HARBOR_NAMESPACE:$BRANCH"
+            }
+          }
+        }
+        stage('测试') {
+          steps {
+            container('maven') {
+              sh '''
+                curl --request POST --url $KUBER/envApplication --header 'content-type:application/json' --data '{"code": "'$CODE'","workspaceId": "'$WORKSPACEID'","operator": "start","envTypeList": "[1]" }'
+              '''
+            }
+            input(message: '功能测试是否通过？', ok: '通过')
+            input(message: '性能测试是否通过？', ok: '通过')
+          }
+        }
+        stage('生产') {
+          steps {
+            input(message: '是否部署生产？', ok: '部署')
+            container('maven') {
+              sh '''
+                curl --request POST --url $KUBER/envApplication --header 'content-type:application/json' --data '{"code": "'$CODE'","workspaceId": "'$WORKSPACEID'","operator": "start","envTypeList": "[2]" }'
+              '''
+            }
+          }
+        }
+      }
+      post {
+        aborted {
+          container('maven') {
+            sh '''
+              curl --request POST --url $KUBER/envApplication --header 'content-type:application/json' --data '{"code": "'$CODE'","workspaceId": "'$WORKSPACEID'","operator": "delete","envTypeList": "[1]" }'
+            '''
+          }
+        }
+      }
+    }
+  app-without-test-jenkins.yaml: |
+    pipeline {
+      agent {
+        kubernetes {
+          inheritFrom 'maven'
+          yaml '''
+            spec:
+              nodeSelector:
+                kubernetes.io/hostname: {{ .Values.devops.nodeSelector.value }}
+          '''
+        }
+      }
+      environment {
+        BRANCH = '%s'
+        REGISTRY = '%s'
+        HARBOR_NAMESPACE  = '%s'
+        KUBER = '%s'
+        CODE = '%s'
+        WORKSPACEID = '%s'
+        HARBOR_CREDENTIAL = credentials('harbor')
+      }
+      stages {
+        stage('开发') {
+          agent none
+          steps {
+            echo "$BRANCH"
+            git(url: '%s', credentialsId: 'gitlab', branch: "$BRANCH", changelog: true, poll: false)
+            container('maven') {
+              withCredentials([string(credentialsId:'%s',variable:'sonar_token')]){
+                withSonarQubeEnv('sonar') {
+                  sh '''
+                    %s
+                  '''
+                }
+              }
+            }
+            input(message: '代码扫描是否通过？', ok: '通过')
+            container('docker') {
+              sh '''echo $HARBOR_CREDENTIAL_PSW | docker login $REGISTRY -u 'robot$%s' --password-stdin'''
+              sh "docker build -t $REGISTRY/$HARBOR_NAMESPACE:$BRANCH ."
+              sh "docker push $REGISTRY/$HARBOR_NAMESPACE:$BRANCH"
+              sh "docker rmi $REGISTRY/$HARBOR_NAMESPACE:$BRANCH"
+            }
+          }
+        }
+        stage('生产') {
+          steps {
+            input(message: '是否部署生产？', ok: '部署')
+            container('maven') {
+              sh '''
+                curl --request POST --url $KUBER/envApplication --header 'content-type:application/json' --data '{"code": "'$CODE'","workspaceId": "'$WORKSPACEID'","operator": "start","envTypeList": "[2]" }'
+              '''
+            }
+          }
+        }
+      }
+      post {
+        aborted {
+          container('maven') {
+            sh '''
+              curl --request POST --url $KUBER/envApplication --header 'content-type:application/json' --data '{"code": "'$CODE'","workspaceId": "'$WORKSPACEID'","operator": "delete","envTypeList": "[1]" }'
+            '''
+          }
+        }
+      }
+    }
+  app-prod-jenkins.yaml: |
+    pipeline {
+      agent {
+        kubernetes {
+          inheritFrom 'maven'
+          yaml '''
+            spec:
+              nodeSelector:
+                kubernetes.io/hostname: {{ .Values.devops.nodeSelector.value }}
+          '''
+        }
+      }
+      environment {
+        REGISTRY = '%s'
+        HARBOR_NAMESPACE  = '%s'
+        KUBER = '%s'
+        CODE = '%s'
+        WORKSPACEID = '%s'
+        HARBOR_CREDENTIAL = credentials('harbor')
+      }
+      stages {
+        stage('生产') {
+          steps {
+            echo "部署到生产环境"
+            container('docker') {
+              sh '''echo $HARBOR_CREDENTIAL_PSW | docker login $REGISTRY -u 'robot$%s' --password-stdin'''
+              sh "docker pull $REGISTRY/$HARBOR_NAMESPACE"
+            }
+            container('maven') {
+              sh '''
+                curl --request POST --url $KUBER/envApplication --header 'content-type:application/json' --data '{"code": "'$CODE'","workspaceId": "'$WORKSPACEID'","operator": "start","envTypeList": "[2]" }'
+              '''
+            }
+            container('docker') {
+              sh "docker rmi $REGISTRY/$HARBOR_NAMESPACE"
+            }
+          }
+        }
+      }
+    }
+  dtos-job.yaml: |
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: dtos
+      namespace: {{ .Values.global.namespace }}
+    spec:
+      completions: 1
+      template:
+        spec:
+          volumes:
+            - hostPath:
+                path: /cert
+              name: https-cert
+          nodeSelector:
+            kubernetes.io/hostname: {{ .Values.dtos.nodeSelector }}
+          hostNetwork: true
+          containers:
+            - name: dtos
+              image: {{ .Values.dtos.image }}
+              imagePullPolicy: Always
+              env:
+                - name: env_hosts_ip
+                  value: '{{ .Values.dtos.env_hosts_ip }}'
+                - name: env_hosts_passwd
+                  value: '{{ .Values.dtos.env_hosts_passwd }}'
+                - name: env_csi_rdb
+                  value: '{{ .Values.dtos.env_csi_rdb }}'
+                - name: env_domain_suffix
+                  value: 'dtos'
+                # 命名空间固定
+                - name: env_namespace_name
+                  value: 'dtos'
+                - name: env_joiningos_url
+                  value: '{{ .Values.initJos.network }}://{{ .Values.initJos.sso_auth }}:{{ .Values.initJos.nodePort }}/sso'
+                - name: env_joiningos_client_id
+                  value: '1751877268187873280'
+                - name: env_joiningos_client_secret
+                  value: 'aaaa-bbbb-cccc-dddd-eeee'
+                - name: env_ip_address_pool
+                  value: '192.168.0.121-192.168.0.129'
+              volumeMounts:
+                - mountPath: /cert
+                  name: https-cert
+          restartPolicy: Never

@@ -1,0 +1,9 @@
+# License: Apache-2.0
+
+---
+
+apiVersion: v2
+name: multus-cni
+description: A Helm chart for multus-cni
+type: application
+version: 0.1.0

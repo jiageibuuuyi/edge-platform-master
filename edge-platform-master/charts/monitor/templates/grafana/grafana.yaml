@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.global.uuid }}-grafana
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: {{ .Values.global.uuid }}-grafana
+  template:
+    metadata:
+      labels:
+        k8s-app: {{ .Values.global.uuid }}-grafana
+    spec:
+      containers:
+        - name: grafana
+          image: {{ .Values.image.grafana }}
+          command:
+            - /bin/sh
+            - '-c'
+            - /usr/grafana/bin/linux-amd64/grafana-server
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          volumeMounts:
+            - name: host-time
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: config
+              mountPath: /usr/grafana/conf/defaults.ini
+              subPath: defaults.ini
+      volumes:
+        - hostPath:
+            path: /etc/localtime
+            type: ''
+          name: host-time
+        - name: config
+          configMap:
+            name: {{ .Values.global.uuid }}-grafana-config

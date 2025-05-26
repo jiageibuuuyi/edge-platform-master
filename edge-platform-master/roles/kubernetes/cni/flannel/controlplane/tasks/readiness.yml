@@ -1,0 +1,8 @@
+# License: Apache-2.0
+---
+
+- name: verify flannel daemonsets
+  check_k8s_object:
+    name: kube-flannel-ds
+    namespace: kube-system
+    kind: daemonset

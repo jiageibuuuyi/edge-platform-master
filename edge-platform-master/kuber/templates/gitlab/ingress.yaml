@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.global.uuid }}-gitlab
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 10240m
+spec:
+  ingressClassName: {{ .Values.initJos.uuid }}-nginx
+{{- if eq .Values.initJos.network "https" }}
+  tls:
+    - hosts:
+        - {{ .Values.domain.gitlab_app }}.{{ .Values.initJos.hosts }}
+      secretName: {{ .Values.global.tlsSecret }}
+{{- end }}
+  rules:
+  - host: {{ .Values.domain.gitlab_app }}.{{ .Values.initJos.hosts }}
+    http:
+      paths:
+        - backend:
+            service:
+              name: {{ .Values.global.uuid }}-gitlab
+              port:
+                number: 80
+          path: /
+          pathType: ImplementationSpecific

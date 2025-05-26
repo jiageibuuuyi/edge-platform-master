@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+#指定mysql deployment配置文件name、namespace
+  labels:
+    app: {{ .Values.global.uuid }}-mysql
+  name: {{ .Values.global.uuid }}-mysql-deploy
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.global.uuid }}-mysql
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.global.uuid }}-mysql
+    spec:
+      containers:
+      - env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: admin@123!
+#mysql拉取镜像配置
+        image: {{ .Values.harbor.host }}{{ .Values.image.kuber_mysql }}
+        imagePullPolicy: Always
+        name: mysql-standalone
+        ports:
+        - containerPort: 3306
+          protocol: TCP
+        resources:
+          limits:
+            cpu: '4'
+            memory: 4Gi
+          requests:
+            cpu: 10m
+            memory: 10Mi
+        volumeMounts:
+        - mountPath: /etc/localtime
+          name: timezone
+          readOnly: true
+        - mountPath: /var/lib/mysql
+          name: data
+          subPath: data/mysql
+        - name: mysql-config-map
+          mountPath: /etc/mysql/conf.d/my.cnf
+          subPath: my.cnf
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /etc/localtime
+        name: timezone
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.global.uuid }}-standalone-pvc
+      - name: mysql-config-map
+        configMap:
+          name: {{ .Values.global.uuid }}-mysql

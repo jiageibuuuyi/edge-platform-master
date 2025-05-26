@@ -1,0 +1,5 @@
+---
+host_entries:
+- {ip: "{{ hostvars[groups['controller_group'][0]]['ansible_host'] }}", hostname: sealos.hub}
+
+hostCoreName: harbor.joiningos.com

@@ -1,0 +1,14 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+#pvc 的name
+  name: {{ .Values.global.uuid }}-standalone-pvc
+#namespace
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - {{ .Values.global.volum.accessModes }}
+  resources:
+    requests:
+      storage: {{ .Values.global.volum.capacity_storage }}
+  storageClassName: {{ .Values.global.volum.storageClassName }}

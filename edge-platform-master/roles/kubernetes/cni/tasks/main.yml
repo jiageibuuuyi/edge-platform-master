@@ -1,0 +1,91 @@
+# License: Apache-2.0
+
+---
+
+- name: do a precheck
+  include_tasks: precheck.yml
+
+- name: detect machine type and load available roles
+  include_tasks: common.yml
+
+- name: apply main CNI
+  include_role:
+    name: "kubernetes/cni/{{ kubernetes_cnis[0] }}/{{ role_postfix }}"
+  vars:
+    cni_weight: 10
+
+- name: wait for harbor registry to ready -- normally take about 30 minutes for slow network
+  block:
+    - name: check the status of harbor StatefulSet
+      shell: kubectl get sts -n harbor | grep 0/1 | wc -l
+      register: harbor_sts
+      retries: 100
+      delay: 60
+      until: harbor_sts.stdout | int == 0
+      changed_when: False
+    - name: check the status of harbor Deployment
+      shell: kubectl get deploy -n harbor | grep 0/1 | wc -l
+      register: harbor_deploy
+      retries: 100
+      delay: 60
+      until: harbor_deploy.stdout | int == 0
+      changed_when: False
+    - name: check the status of harbor Pods
+      shell: kubectl get pods -n harbor | grep -v Running | wc -l
+      register: harbor_pods
+      retries: 100
+      delay: 60
+      until: harbor_pods.stdout | int == 1
+      changed_when: False
+  rescue:
+    - name: print pod log related to abnormal Deployment and StatefulSet
+      shell: |
+        s0=$(printf '%-50s' ' ')
+        s1=${s0// />}
+        s2=${s0// /<}
+        for i in $(kubectl get "{{ item }}" -n harbor | grep 0/1 | awk '{print $1}')
+        do
+          pod_name=$(kubectl get po -n harbor | grep "${i}" | awk '{print $1}')
+          echo "${s1}[        Describe ${pod_name}        ]${s2}"
+          kubectl describe po "${pod_name}" -n harbor
+          if [ "${i}" != "harbor-app-harbor-clair" -a "${i}" != "harbor-app-harbor-registry" ]; then
+            echo "${s1}[         Log ${pod_name}            ]${s2}"
+            kubectl logs "${pod_name}" -n harbor
+          fi
+        done
+        exit 1
+      loop:
+      - deploy
+      - sts
+  delegate_to: "{{ groups['controller_group'][0] }}"
+
+
+- name: apply harbor node role
+  include_role:
+    name: "kubernetes/harbor_registry/node"
+
+
+- name: multiple CNIs
+  block:
+  - name: apply meta CNI - multus
+    include_role:
+      name: kubernetes/cni/multus/controlplane
+    when: "'controller_group' in group_names"
+
+  - name: apply remaining CNIs
+    include_role:
+      name: "kubernetes/cni/{{ cni }}/{{ role_postfix }}"
+    with_items: "{{ kubernetes_cnis[1:] }}"
+    when: "cni + '/' + role_postfix in available_cni_roles" # run only if 'cni/node_type' is available in the roles/kubernetes/cni/ tree
+    loop_control:
+      loop_var: cni
+      index_var: idx
+    vars:
+      apply_netdef: True
+      cni_weight: "{{ (idx+2) * 10 }}"
+
+  - name: apply meta CNI - multus
+    include_role:
+      name: kubernetes/cni/multus/node
+    when: "'edgenode_group' in group_names"
+  when: kubernetes_cnis|length > 1

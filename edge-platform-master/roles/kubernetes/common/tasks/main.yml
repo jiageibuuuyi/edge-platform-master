@@ -1,0 +1,51 @@
+# License: Apache-2.0
+
+---
+- name: Install sealos tools
+  block:
+  - name: Create random dir with random filter
+    file:
+      path: "/tmp/sealos_{{ ansible_date_time.epoch }}"
+      state: directory
+      mode: '0755'
+    register: random_dir
+  - name: Copy tar file
+    copy:
+      src: "{{ playbook_dir }}/offline_pkgs/docker/sealos_{{_sealos_version }}_linux_amd64.tar.gz"
+      dest: "{{ random_dir.path }}"
+      mode: '0644'
+  - name: Extract sealos tar file
+    unarchive:
+      src: "{{ random_dir.path }}/sealos_{{_sealos_version }}_linux_amd64.tar.gz"
+      dest: "{{ random_dir.path }}"
+  - name: Copy files to /usr/bin
+    copy:
+      src: "{{ random_dir.path }}/{{ item }}"
+      dest: /usr/bin/
+      mode: '0755'
+    with_items:
+      - image-cri-shim
+      - lvscare
+      - sealctl
+      - sealos
+  delegate_to: localhost
+  become: yes 
+
+- name: allow bridged packets to traverse iptables rules
+  block:
+    - name: load br_netfiler module
+      modprobe:
+        name: br_netfilter
+        state: present
+    - name: copy net.bridge.bridge-nf-call-ip(6)tables settings
+      copy:
+        src: sysctl_k8s.conf
+        dest: /etc/sysctl.d/sysctl_k8s.conf
+    - name: get current sysctl vars
+      command: grep 0 /proc/sys/net/bridge/bridge-nf-call-iptables /proc/sys/net/bridge/bridge-nf-call-ip6tables
+      register: sysctl_out
+      ignore_errors: yes
+    - name: refresh sysctl only if desired vars are disabled
+      command: sysctl --system
+      when: sysctl_out.rc == 0
+  become: yes

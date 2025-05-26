@@ -1,0 +1,86 @@
+# License: Apache-2.0
+
+---
+- name: check docker binary exists
+  stat:
+    path: "{{ playbook_dir }}/offline_pkgs/docker/docker-{{ _docker_version }}.tgz"
+  register: file_check
+
+- name: fail if not exists
+  fail:
+    msg: "can not find docker binary"
+  when: not file_check.stat.exists
+
+- name: Cleanup temp files
+  file:
+    path: /tmp/deploy
+    state: absent
+  ignore_errors: true
+
+- name: Create temp directory
+  file:
+    path: /tmp/deploy
+    state: directory
+    mode: '0755'
+
+- name: Copy tar file to remote
+  copy:
+    src: "{{ playbook_dir }}/offline_pkgs/docker/docker-{{ _docker_version }}.tgz"
+    dest: /tmp/deploy/docker-{{ _docker_version }}.tgz
+    mode: '0644'
+
+- name: Create random dir with random filter
+  file:
+    path: "/tmp/docker_{{ ansible_date_time.epoch }}"
+    state: directory
+    mode: '0755'
+  register: random_dir
+  become: yes
+
+- name: Extract docker tar file
+  unarchive:
+    src: /tmp/deploy/docker-{{ _docker_version }}.tgz
+    dest: "{{ random_dir.path }}"
+    remote_src: yes
+  become: yes 
+
+- name: Copy files to /usr/bin
+  copy:
+    src: "{{ random_dir.path }}/docker/{{ item }}"
+    dest: /usr/bin/
+    mode: '0755'
+    remote_src: yes
+  become: yes  
+  with_items:
+    - runc
+    - docker-init
+    - dockerd
+    - docker-proxy
+    - docker
+
+- name: Cleanup temp files
+  file:
+    path: "{{ random_dir.path }}"
+    state: absent
+  become: yes
+
+- name: set cgroups driver to systemd and configure docker registries
+  block:
+    - name: make sure /etc/docker/ exists
+      file:
+        path: /etc/docker/
+        state: directory
+    - name: Generate systemctl services
+      template:
+        src: docker.service.j2
+        dest: /usr/lib/systemd/system/docker.service
+    - name: Generate daemon.json
+      template:
+        src: daemon.json.j2
+        dest: /etc/docker/daemon.json
+      notify:
+        - enable and start docker service
+  become: yes
+
+- name: restart services if needed
+  meta: flush_handlers

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.global.uuid }}-redis
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.global.uuid }}-redis
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.global.uuid }}-redis
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.global.uuid }}-redis
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.harbor.host }}{{ .Values.image.kuber_redis }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TZ
+              value: Asia/Shanghai
+          ports:
+            - name: http
+              containerPort: 6379
+              protocol: TCP
+          resources:
+            limits:
+              cpu: '1'
+              memory: 200Mi
+            requests:
+              cpu: 50m
+              memory: 100Mi
+          volumeMounts:
+            - name: host-time
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: jos-pvc
+              mountPath: /data
+              subPath: data/redis
+      volumes:
+        - hostPath:
+            path: /etc/localtime
+            type: ''
+          name: host-time
+        - name: jos-pvc
+          persistentVolumeClaim:
+            claimName: {{ .Values.global.uuid }}-standalone-pvc

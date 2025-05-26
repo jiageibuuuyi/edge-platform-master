@@ -1,0 +1,26 @@
+# License: Apache-2.0
+
+---
+
+- name: fail if no CNI is set up
+  fail:
+    msg: "At least 1 CNI is required"
+  when: kubernetes_cnis|length == 0
+
+- name: fail if calico isn't a primary CNI
+  fail:
+    msg: "Calico is only supported as a primary (main, 1st on the list) CNI"
+  when:
+  - '"calico" in kubernetes_cnis'
+  - kubernetes_cnis[0] != "calico"
+
+- name: load kubernetes/cni defaults
+  include_vars:
+    file: ../defaults/main.yml
+    name: defaults
+
+- name: fail if requested CNI is not available
+  fail:
+    msg: "Requested CNI is not available: {{ item }}"
+  with_items: "{{ kubernetes_cnis }}"
+  when: "item not in defaults._available_kubernetes_cnis"

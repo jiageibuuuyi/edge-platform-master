@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.global.uuid }}-postgresql
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    name: {{ .Values.global.uuid }}-postgresql
+spec:
+  selector:
+    matchLabels:
+      name: {{ .Values.global.uuid }}-postgresql
+  template:
+    metadata:
+      labels:
+        name: {{ .Values.global.uuid }}-postgresql
+    spec:
+      containers:
+          - name: postgresql
+            image: {{ .Values.harbor.host }}{{ .Values.image.jos_postgresql }}
+            imagePullPolicy: IfNotPresent
+            env:
+              - name: DB_USER
+                value: gitlab
+              - name: DB_PASS
+                value: passw0rd
+              - name: DB_NAME
+                value: gitlab_production
+              - name: DB_EXTENSION
+                value: 'pg_trgm,btree_gist'
+            ports:
+              - name: postgres
+                containerPort: 5432
+            resources:
+              limits:
+                cpu: '1'
+                memory: 200Mi
+              requests:
+                cpu: 50m
+                memory: 100Mi
+            volumeMounts:
+              - name: host-time
+                mountPath: /etc/localtime
+                readOnly: true
+              - mountPath: /var/lib/postgresql
+                name: data
+                subPath: data/postgresql
+            livenessProbe:
+              exec:
+                command:
+                  - pg_isready
+                  - -h
+                  - localhost
+                  - -U
+                  - postgres
+              initialDelaySeconds: 30
+              timeoutSeconds: 5
+            readinessProbe:
+              exec:
+                command:
+                  - pg_isready
+                  - -h
+                  - localhost
+                  - -U
+                  - postgres
+              initialDelaySeconds: 5
+              timeoutSeconds: 5
+      volumes:
+        - hostPath:
+            path: /etc/localtime
+            type: ''
+          name: host-time
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.global.uuid }}-standalone-pvc

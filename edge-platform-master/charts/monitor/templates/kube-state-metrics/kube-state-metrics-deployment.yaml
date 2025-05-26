@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ .Values.global.uuid }}-kube-state-metrics
+  name: {{ .Values.global.uuid }}-kube-state-metrics
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.global.uuid }}-kube-state-metrics
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.global.uuid }}-kube-state-metrics
+    spec:
+      serviceAccountName: {{ .Values.global.uuid }}-kube-state-metrics
+      containers:
+      - name: kube-state-metrics
+        image: {{ .Values.image.kube_state_metrics }}
+        ports:
+        - name: http-metrics
+          containerPort: 8080
+        - name: telemetry
+          containerPort: 8081
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          timeoutSeconds: 10
+      - name: addon-resizer
+        image:  {{ .Values.image.addon_resizer }}
+        resources:
+          limits:
+            cpu: 100m
+            memory: 300Mi
+          requests:
+            cpu: 100m
+            memory: 30Mi
+        env:
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: MY_POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        command:
+          - /pod_nanny
+          - --container=kube-state-metrics
+          - --cpu=100m
+          - --extra-cpu=1m
+          - --memory=200Mi
+          - --extra-memory=2Mi
+          - --threshold=5
+          - --deployment={{ .Values.global.uuid }}-kube-state-metrics

@@ -1,0 +1,8 @@
+# License: Apache-2.0
+
+---
+- name: remove helm binaries
+  file:
+    path: "{{ _helm_binary_path }}"
+    state: absent
+  become: yes

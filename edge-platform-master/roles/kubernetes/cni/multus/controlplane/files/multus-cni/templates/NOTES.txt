@@ -1,0 +1,15 @@
+{{/*
+# License: Apache-2.0
+*/}}
+
+Chart {{ .Chart.Name }} was successfully installed
+
+Multus image was saved in local Harobr registry
+Image name: {{ .Values.registry_ip }}:{{ .Values.registry_port }}/jos/multus:{{ .Values.image_tag }}
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}

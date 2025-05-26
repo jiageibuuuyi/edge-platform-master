@@ -1,0 +1,21 @@
+---
+- name: Copy directory
+  copy:
+    src: ../files/harbor.joiningos.com/
+    dest: /etc/containerd/certs.d/harbor.joiningos.com/
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Copy containerd config
+  copy:
+    src: ../files/config.toml
+    dest: /etc/containerd/config.toml
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: restart containerd service
+  systemd:
+    name: containerd
+    state: restarted

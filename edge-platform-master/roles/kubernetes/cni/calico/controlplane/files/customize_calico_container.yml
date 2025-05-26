@@ -1,0 +1,9 @@
+# License: Apache-2.0
+
+---
+
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: IP_AUTODETECTION_METHOD
+    value: "can-reach=8.8.8.8"

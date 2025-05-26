@@ -1,0 +1,22 @@
+---
+- name: Read cert
+  slurp:
+    src: "{{ playbook_dir }}/offline_pkgs/tls/tls.crt"
+  register: encoded_cert
+
+- name: Read key
+  slurp:
+    src: "{{ playbook_dir }}/offline_pkgs/tls/tls.key"
+  register: encoded_key
+
+- name: Read pem
+  slurp:
+    src: "{{ playbook_dir }}/offline_pkgs/tls/cacerts.pem"
+  register: encoded_pem
+
+- name: install kuber application
+  command: >
+    helm install kuber {{ playbook_dir }}/offline_pkgs/charts/kuber-2.5.0.tgz
+    --set tls.crt={{ encoded_cert.content }} --set tls.key={{ encoded_key.content }} --set ca.pem={{ encoded_pem.content }}
+    --set initJos.hosts=joiningos.com --set initJos.privateCA=true --set ingress.nodeSelector.value={{ ansible_hostname }} --set devops.nodeSelector.value={{ ansible_hostname }}
+  changed_when: true

@@ -1,0 +1,16 @@
+# License: Apache-2.0
+
+---
+- name: install xz tools
+  dnf:
+    name: xz
+    state: present
+    skip_broken: yes
+  become: yes
+
+- name: install tar tools
+  dnf:
+    name: tar
+    state: present
+    skip_broken: yes
+  become: yes

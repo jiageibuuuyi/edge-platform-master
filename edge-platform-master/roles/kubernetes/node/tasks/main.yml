@@ -1,0 +1,26 @@
+# License: Apache-2.0
+
+---
+- name: update /etc/hosts
+  include_tasks: roles/kubernetes/harbor_registry/controlplane/tasks/update_hosts.yml
+
+- name: join into k8s
+  shell: >
+    set -o pipefail &&
+    sealos add --nodes {{ groups['edgenode_group'] | map('extract', hostvars, 'ansible_host') | join(',') }}
+  delegate_to: "{{ groups['controller_group'][0] }}"
+
+- name: update harbor
+  include_tasks: roles/kubernetes/harbor_registry/controlplane/tasks/update_harbor.yml
+
+- name: Copy admin.conf from master to node
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /etc/kubernetes/admin.conf
+    owner: root
+    group: root
+    mode: '0644'
+  delegate_to: "{{ groups['controller_group'][0] }}"
+
+- name: load loki images
+  include_tasks: roles/kubernetes/harbor_registry/controlplane/tasks/load_loki.yml

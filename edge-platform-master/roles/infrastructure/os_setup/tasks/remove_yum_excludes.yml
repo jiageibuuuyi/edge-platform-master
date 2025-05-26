@@ -1,0 +1,12 @@
+# License: Apache-2.0
+
+---
+- name: Remove excludes (rpm packages) from /etc/yum.conf
+  lineinfile:
+    dest: /etc/yum.conf
+    regexp: "^exclude=.*"
+    state: absent
+  when:
+    - _os_yum_exclude_rpm_packages is defined
+    - _os_yum_exclude_rpm_packages|length > 0
+  become: yes

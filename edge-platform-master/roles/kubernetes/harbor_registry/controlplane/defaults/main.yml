@@ -1,0 +1,262 @@
+# License: Apache-2.0
+
+---
+
+harbor_chart_version: 1.11.4
+sealosAdminPassword: passw0rd
+
+host_entries:
+- {ip: "{{ hostvars[groups['controller_group'][0]]['ansible_host'] }}", hostname: harbor.joiningos.com}
+- {ip: "{{ hostvars[groups['controller_group'][0]]['ansible_host'] }}", hostname: sealos.hub}
+harborAdminPassword: P@88w0rd
+externalURL: https://harbor.joiningos.com
+hostCoreName: harbor.joiningos.com
+
+sealoshub: sealos.hub:5000/library
+helm_plugin_dir: /root/.local/share/helm/plugins/helm-push
+
+tar_name_lists:
+- busybox.tar
+- chartmuseum-photon.tar
+- harbor-core.tar
+- harbor-db.tar
+- harbor-jobservice.tar
+- harbor-portal.tar
+- harbor-registryctl.tar
+- kube-webhook-certgen.tar
+- local-path-provisioner.tar
+- nginx-ingress-controller.tar
+- redis-photon.tar
+- registry-photon.tar
+- trivy-adapter-photon.tar
+
+image_name_lists:
+- docker.io/goharbor/trivy-adapter-photon:v2.7.4
+- docker.io/goharbor/registry-photon:v2.7.4
+- docker.io/goharbor/harbor-registryctl:v2.7.4
+- docker.io/goharbor/redis-photon:v2.7.4
+- docker.io/goharbor/harbor-portal:v2.7.4
+- docker.io/goharbor/harbor-jobservice:v2.7.4
+- docker.io/goharbor/harbor-db:v2.7.4
+- docker.io/goharbor/harbor-core:v2.7.4
+- docker.io/goharbor/chartmuseum-photon:v2.7.4
+- docker.io/rancher/local-path-provisioner:v0.0.22
+- docker.io/library/busybox:latest
+- registry.cn-hangzhou.aliyuncs.com/google_containers/nginx-ingress-controller:v1.3.1
+- registry.cn-hangzhou.aliyuncs.com/google_containers/kube-webhook-certgen:v1.3.0
+
+public_projects:
+- '{"project_name":"joiningos", "public": true}'
+- '{"project_name":"lowcode", "public": true}'
+- '{"project_name":"joiningos", "public": true}'
+- '{"project_name":"lowcode", "public": true}'
+- '{"project_name":"appstore", "public": true}'
+- '{"project_name":"kubesphereio", "public": true}'
+- '{"project_name":"rancher", "public": true}'
+- '{"project_name":"iot", "public": true}'
+- '{"project_name":"kubesphere", "public": true}'
+- '{"project_name":"ocp", "public": true}'
+- '{"project_name":"s3", "public": true}'
+- '{"project_name":"third-app", "public": true}'
+
+
+kubesphere_images:
+- harbor.joiningos.com/kubesphereio/kubesphere/ks-installer:v3.4.0
+- harbor.joiningos.com/kubesphereio/kubesphere/ks-apiserver:v3.4.0
+- harbor.joiningos.com/kubesphereio/kubesphere/ks-console:v3.4.0
+- harbor.joiningos.com/kubesphereio/kubesphere/ks-controller-manager:v3.4.0
+- harbor.joiningos.com/kubesphereio/kubesphere/kubectl:v1.22.0
+- harbor.joiningos.com/kubesphereio/kubesphere/kubectl:v1.20.0
+- harbor.joiningos.com/kubesphereio/kubesphere/kubefed:v0.8.1
+- harbor.joiningos.com/kubesphereio/kubesphere/tower:v0.2.1
+- harbor.joiningos.com/kubesphereio/minio/minio:RELEASE.2019-08-07T01-59-21Z
+- harbor.joiningos.com/kubesphereio/minio/mc:RELEASE.2019-08-07T23-14-43Z
+- harbor.joiningos.com/kubesphereio/csiplugin/snapshot-controller:v4.0.0
+- harbor.joiningos.com/kubesphereio/kubesphere/nginx-ingress-controller:v1.3.1
+- harbor.joiningos.com/kubesphereio/mirrorgooglecontainers/defaultbackend-amd64:1.4
+- harbor.joiningos.com/kubesphereio/kubesphere/metrics-server:v0.4.2
+- harbor.joiningos.com/kubesphereio/redis:5.0.14-alpine
+- harbor.joiningos.com/kubesphereio/haproxy:2.0.25-alpine
+- harbor.joiningos.com/kubesphereio/alpine:3.14
+- harbor.joiningos.com/kubesphereio/osixia/openldap:1.3.0
+- harbor.joiningos.com/kubesphereio/kubesphere/netshoot:v1.0
+- harbor.joiningos.com/kubesphereio/kubesphere/devops-apiserver:ks-v3.4.0
+- harbor.joiningos.com/kubesphereio/kubesphere/devops-controller:ks-v3.4.0
+- harbor.joiningos.com/kubesphereio/kubesphere/devops-tools:ks-v3.4.0
+- harbor.joiningos.com/kubesphereio/kubesphere/ks-jenkins:v3.4.0-2.319.3-1
+- harbor.joiningos.com/kubesphereio/jenkins/inbound-agent:4.10-2
+- harbor.joiningos.com/kubesphereio/kubesphere/builder-base:v3.2.2
+- harbor.joiningos.com/kubesphereio/kubesphere/builder-nodejs:v3.2.0
+- harbor.joiningos.com/kubesphereio/kubesphere/builder-maven:v3.2.0
+- harbor.joiningos.com/kubesphereio/kubesphere/builder-maven:v3.2.1-jdk11
+- harbor.joiningos.com/kubesphereio/kubesphere/builder-base:v3.2.2-podman
+- harbor.joiningos.com/kubesphereio/kubesphere/builder-nodejs:v3.2.0-podman
+- harbor.joiningos.com/kubesphereio/kubesphere/builder-maven:v3.2.0-podman
+- harbor.joiningos.com/kubesphereio/kubesphere/builder-maven:v3.2.1-jdk11-podman
+- harbor.joiningos.com/kubesphereio/kubesphere/s2ioperator:v3.2.1
+- harbor.joiningos.com/kubesphereio/argoproj/argocd:v2.3.3
+- harbor.joiningos.com/kubesphereio/argoproj/argocd-applicationset:v0.4.1
+- harbor.joiningos.com/kubesphereio/dexidp/dex:v2.30.2
+- harbor.joiningos.com/kubesphereio/library/redis:6.2.6-alpine
+- harbor.joiningos.com/kubesphereio/jimmidyson/configmap-reload:v0.7.1
+- harbor.joiningos.com/kubesphereio/prom/prometheus:v2.39.1
+- harbor.joiningos.com/kubesphereio/kubesphere/prometheus-config-reloader:v0.55.1
+- harbor.joiningos.com/kubesphereio/kubesphere/prometheus-operator:v0.55.1
+- harbor.joiningos.com/kubesphereio/kubesphere/kube-rbac-proxy:v0.11.0
+- harbor.joiningos.com/kubesphereio/kubesphere/kube-state-metrics:v2.6.0
+- harbor.joiningos.com/kubesphereio/prom/node-exporter:v1.3.1
+- harbor.joiningos.com/kubesphereio/prom/alertmanager:v0.23.0
+- harbor.joiningos.com/kubesphereio/thanosio/thanos:v0.31.0
+- harbor.joiningos.com/kubesphereio/grafana/grafana:8.3.3
+- harbor.joiningos.com/kubesphereio/kubesphere/kube-rbac-proxy:v0.11.0
+- harbor.joiningos.com/kubesphereio/kubesphere/notification-manager-operator:v2.3.0
+- harbor.joiningos.com/kubesphereio/kubesphere/notification-manager:v2.3.0
+- harbor.joiningos.com/kubesphereio/kubesphere/notification-tenant-sidecar:v3.2.0
+- harbor.joiningos.com/kubesphereio/kubesphere/elasticsearch-curator:v5.7.6
+- harbor.joiningos.com/kubesphereio/kubesphere/opensearch-curator:v0.0.5
+- harbor.joiningos.com/kubesphereio/busybox:1.31
+- harbor.joiningos.com/kubesphereio/sonarqube:8.9-community
+- harbor.joiningos.com/kubesphereio/postgresql:11.7.0-debian-10-r26
+- harbor.joiningos.com/kubesphereio/docker:20
+
+joiningos_images:
+- iot_front
+- jetlinks
+- iot_mysql
+- iot_redis
+- elasticsearch
+- kibana
+- tdengine
+- joiningos_front
+- joiningos
+- sso_server
+- user_center
+- auth
+- monitor
+- app
+- joiningos_mysql
+- joiningos_redis
+- joiningos_minio
+- ocp_front
+- admin
+- bootstrap
+- ocp_busybox
+- jos_nacos
+- gitlab
+- jos_postgresql
+- jos_mongodb
+- sentinel
+- zipkin
+- xxljob
+- seata
+- license_server
+- license_client
+- lowcode_front
+- lowcode
+- lowcode_mysql
+- lowcode_redis
+- kaniko
+- service
+- api
+- devops_mysql
+- s3_minio
+- csi_attacher
+- driver_registrar
+- csi_s3
+- csi_provisioner
+- metrics_server
+- ingress
+- ingress_job
+- ks_apiserver
+- ks_console
+- grafana
+- kube_state_metrics
+- prometheus
+- addon_resizer
+- grafana_mysql
+- h2o
+- kuber
+- kuber_mysql
+- kuber_apline
+- kuber_busybox
+
+joiningos_tags:
+- iot/iot-front:2.3.0
+- iot/iot:2.5.0
+- iot/my-mysql:2.3.0
+- iot/redis:5.0.4
+- iot/elasticsearch:6.8.11
+- iot/kibana:6.8.11
+- iot/tdengine:3.2.3.0
+- joiningos/front:2.5.0
+- joiningos/joiningos:2.5.0
+- joiningos/sso-server:2.5.0
+- joiningos/user-center:2.5.0
+- joiningos/auth:2.3.6
+- joiningos/monitor:2.3.6
+- joiningos/app:2.4.2
+- joiningos/my-mysql:2.5.0
+- joiningos/redis:7.2.3
+- joiningos/minio:2023.3.20
+- ocp/front:2.4.2.1
+- ocp/admin:2.5.0
+- ocp/bootstrap:2.5.0
+- ocp/busybox:1.35.0
+- ocp/nacos:2.2.0
+- joiningos/gitlab:12.9.5
+- joiningos/postgresql:10-2
+- joiningos/mongo:7.0.8
+- joiningos/sentinel:2.3.6
+- joiningos/zipkin:2.3.6
+- joiningos/xxljob:2.4.1
+- joiningos/seata:2.0.0
+- joiningos/license-server:2.5.0
+- joiningos/license-client:2.5.0
+- lowcode/lowcode-ui:2.5.0
+- joiningos/joiningos:2.5.0
+- lowcode/jos-portal-mysql-tenant:2.4.4
+- lowcode/redis:1.0
+- lowcode/kaniko-executor:latest
+- lowcode/shop-service:2.4.4
+- lowcode/shop-api:2.4.4
+- library/mysql:8.2.0
+- s3/minio:2023.3.20
+- s3/csi-attacher:v3.1.0
+- s3/csi-node-driver-registrar:v1.2.0
+- s3/csi-s3:v1.2.0-rc.2
+- s3/csi-provisioner:v2.1.0
+- library/metrics-server:v0.6.4
+- joiningos/ingress:v1.3.1
+- joiningos/kube-webhook-certgen:v1.3.0
+- kubesphere/ks-apiserver:2.5.0
+- kubesphere/ks-console:2.5.0
+- joiningos/grafana:main
+- joiningos/kube-state-metrics:1.9.7
+- joiningos/prometheus:v2.51.0
+- joiningos/addon-resizer:1.8.5
+- joiningos/monitor-mysql:2.3.7
+- joiningos/h2o:2.4.4
+- joiningos/kuber:2.5.0
+- joiningos/kuber-mysql:2.4.4
+- joiningos/my-apline:latest
+- joiningos/busybox:latest
+
+rancher_images:
+- rancher
+- rancher-webhook
+- fleet-agent
+- fleet
+- shell
+- gitjob
+- mirrored
+- kubectl
+
+rancher_names:
+- rancher/rancher:v2.8.5
+- rancher/rancher-webhook:v0.4.7
+- rancher/fleet-agent:v0.9.5
+- rancher/fleet:v0.9.5
+- rancher/shell:v0.1.24
+- rancher/gitjob:v0.9.8
+- rancher/mirrored-cluster-api-controller:v1.4.4
+- rancher/kubectl:v1.20.2

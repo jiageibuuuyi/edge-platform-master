@@ -1,0 +1,9 @@
+# License: Apache-2.0
+
+---
+
+- name: delete certificate from node
+  file:
+    path: "/etc/docker/certs.d/{{ _registry_ip_address }}:{{ _registry_port }}"
+    state: absent
+  ignore_errors: yes

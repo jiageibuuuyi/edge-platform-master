@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.global.uuid }}-prometheus
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.global.uuid }}-prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.global.uuid }}-prometheus
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.global.uuid }}-prometheus
+      annotations:
+        prometheus.io/scrape: 'false'
+    spec:
+      containers:
+      - name: prometheus
+        image: {{ .Values.image.prometheus }}
+        imagePullPolicy: IfNotPresent
+        command:
+          - prometheus
+          - --config.file=/etc/prometheus/prometheus.yml
+          - --storage.tsdb.path=/prometheus
+          - --storage.tsdb.retention=168h
+          - --web.enable-lifecycle
+        ports:
+        - containerPort: 9090
+          protocol: TCP
+        volumeMounts:
+        - name: host-time
+          mountPath: /etc/localtime
+          readOnly: true
+        - mountPath: /etc/prometheus/prometheus.yml
+          name: prometheus-config
+          subPath: prometheus.yml
+        - name: prometheus-pvc
+          mountPath: /prometheus
+          subPath: prometheus
+      volumes:
+        - hostPath:
+            path: /etc/localtime
+            type: ''
+          name: host-time
+        - name: prometheus-pvc
+          persistentVolumeClaim:
+            claimName: {{ .Values.global.uuid }}-standalone-pvc
+        - name: prometheus-config
+          configMap:
+            name: {{ .Values.global.uuid }}-prometheus-config
+            items:
+              - key: prometheus.yml
+                path: prometheus.yml

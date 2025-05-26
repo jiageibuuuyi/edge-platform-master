@@ -1,0 +1,184 @@
+# License: Apache-2.0
+
+---
+
+- name: check if harbor release already exists
+  command: helm status harbor -n harbor
+  ignore_errors: yes
+  register: get_release_harbor
+  changed_when: false
+
+- name: harbor installation
+  block:
+  - name: login sealos hub
+    command: "sealos login -u admin -p {{ sealosAdminPassword }} sealos.hub:5000"
+    register: login_result
+    delegate_to: localhost
+  - name: exist if fail to login
+    fail:
+      msg: "login sealos.hub failed."
+    when: login_result.rc != 0
+  - name: 1. load harbor images
+    command: "sealos load -i {{ playbook_dir }}/offline_pkgs/images/{{ item }}"
+    with_items: "{{ tar_name_lists }}"
+    delegate_to: localhost
+  - name: tag and push images
+    shell: >
+      sealos tag {{ item }} {{ sealoshub }}/{{ item.split('/')[-1] }} &&
+      sealos push {{ sealoshub }}/{{ item.split('/')[-1] }}
+    with_items: "{{ image_name_lists }}"
+    delegate_to: localhost
+
+  - name: copy helm charts of harbor to target
+    copy:
+      src: "{{ playbook_dir }}/offline_pkgs/charts/harbor-{{ harbor_chart_version }}.tgz"
+      dest: "/tmp"
+      mode: '0644'
+  - name: copy ingress yaml file to target
+    copy:
+      src: "{{ item }}"
+      dest: "/tmp"
+      mode: '0644'
+    with_items:
+    - "deployingress.yaml"
+    - "local-path-provisioner.yaml"
+  - name: install ingress controller for harbor
+    command: "kubectl apply  -f  /tmp/{{ item }}"
+    with_items:
+    - "deployingress.yaml"
+    - "local-path-provisioner.yaml"
+    register: ingress_result
+  - name: wait ingress ready
+    shell: >
+      set -o pipefail &&
+      kubectl get pods --field-selector status.phase=Running -n ingress-nginx | grep -q "1/1"
+    register: ingress_started
+    retries: 30
+    delay: 10
+    until: ingress_started.rc == 0
+    changed_when: false
+
+  - include_tasks: update_hosts.yml
+
+  - name: install harbor app
+    command: >
+      helm install harbor /tmp/harbor-{{ harbor_chart_version }}.tgz --create-namespace -n harbor
+      --set expose.ingress.hosts.core="{{ hostCoreName }}" --set expose.ingress.className=nginx
+      --set externalURL="{{ externalURL }}"
+      --set harborAdminPassword="{{ harborAdminPassword }}"  --set notary.enabled=false
+      --set portal.image.repository="{{ sealoshub }}"/harbor-portal
+      --set core.image.repository="{{ sealoshub }}"/harbor-core
+      --set jobservice.image.repository="{{ sealoshub }}"/harbor-jobservice
+      --set registry.registry.image.repository="{{ sealoshub }}"/registry-photon
+      --set registry.controller.image.repository="{{ sealoshub }}"/harbor-registryctl
+      --set chartmuseum.image.repository="{{ sealoshub }}"/chartmuseum-photon
+      --set trivy.image.repository="{{ sealoshub }}"/trivy-adapter-photon
+      --set database.internal.image.repository="{{ sealoshub }}"/harbor-db
+      --set redis.internal.image.repository="{{ sealoshub }}"/redis-photon
+  - name: wait jos harbor ready
+    shell: >
+      set -o pipefail &&
+      curl -qk -X GET https://{{ hostCoreName }}/api/v2.0/health | jq '.status' | grep healthy
+    register: harbor_started
+    retries: 30
+    delay: 20
+    until: harbor_started.rc == 0
+    changed_when: false
+  become: yes
+  when: get_release_harbor.rc != 0
+
+- include_tasks: update_harbor.yml
+
+- name: login harbor hub
+  command: "sealos login -u admin -p {{ harborAdminPassword }} {{ hostCoreName }}"
+  register: login_result
+  delegate_to: localhost
+- name: exist if fail to login
+  fail:
+    msg: "login sealos.hub failed."
+  when: login_result.rc != 0
+
+- name: login harbor registry
+  block:
+  - name: create default helm plugin directory
+    command: "mkdir -p {{ helm_plugin_dir }}"
+  - name: install helm binary
+    unarchive:
+      src: "{{ playbook_dir }}/offline_pkgs/charts/helm-push_0.10.4_linux_amd64.tar.gz"
+      dest: "{{ helm_plugin_dir }}"
+  - name: add repo
+    command: "helm repo add --username=admin --password={{ harborAdminPassword }} jos https://{{ hostCoreName }}/chartrepo/library --insecure-skip-tls-verify"
+    register: harbor_repo
+#  - name: create public project
+#    uri:
+#      url: "https://{{ hostCoreName }}/api/v2.0/projects"
+#      user: "admin"
+#      password: "{{ harborAdminPassword }}"
+#      method: POST
+#      body: "{{ item }}"
+#      body_format: json
+#      validate_certs: no
+#      force_basic_auth: true
+#      status_code: [201, 409]
+#      headers:
+#        Content-Type: "application/json"
+#    register: response
+  - name: create public project
+    shell: >
+      curl -k -u 'admin:P@88w0rd' -XPOST -H "Content-Type:application/json" -d '{{ item }}' "https://harbor.joiningos.com/api/v2.0/projects"
+    ignore_errors: yes
+    with_items: "{{ public_projects }}"
+  - name: check harbor login
+    fail:
+      msg: helm login failed
+    when: harbor_repo.rc != 0
+  - name: push helm charts to harbor
+    command: "helm cm-push {{ playbook_dir }}/offline_pkgs/charts/{{ item }} --username=admin --password={{ harborAdminPassword }} jos --insecure"
+    with_items:
+    - artificial_intelligence-2.3.0.tgz
+    - device_gather-2.3.0.tgz
+    - ingress_controller-0.1.0.tgz
+    - joiningos-2.5.0.tgz
+    - low_code-2.3.6.tgz
+    - rancher-2.8.5.tgz
+    - metrics_server-0.1.0.tgz
+    - monitor-2.3.7.tgz
+    - sonarqube-6.7.0.tgz
+    - kubesphere-3.4.0.tgz
+  delegate_to: localhost
+
+- name: 2. load kubesphere images
+  shell: >
+    sealos load -i {{ playbook_dir }}/offline_pkgs/images/kubesphere-images.tar.gz
+  delegate_to: localhost
+- name: 2.1 load docker20 image
+  shell: >
+    sealos load -i {{ playbook_dir }}/offline_pkgs/images/docker20.tar
+  delegate_to: localhost
+- name: push kubesphere images
+  shell: >
+    sealos push {{ item }}
+  with_items: "{{ kubesphere_images }}"
+  delegate_to: localhost
+- name: 3. load joiningos images
+  shell: >
+    sealos load -i {{ playbook_dir }}/offline_pkgs/images/{{ item }}.tar
+  with_items: "{{ joiningos_images }}"
+  delegate_to: localhost
+- name: push joiningos images
+  shell: >
+    sealos push {{ hostCoreName }}/{{ item }}
+  with_items: "{{ joiningos_tags }}"
+  delegate_to: localhost
+- name: 4. load rancher images
+  shell: >
+    sealos load -i {{ playbook_dir }}/offline_pkgs/images/{{ item }}.tar
+  with_items: "{{ rancher_images }}"
+  delegate_to: localhost
+- name: push rancher images
+  shell: >
+    sealos push {{ hostCoreName }}/{{ item }}
+  with_items: "{{ rancher_names }}"
+  delegate_to: localhost
+
+- include_tasks: load_loki.yml

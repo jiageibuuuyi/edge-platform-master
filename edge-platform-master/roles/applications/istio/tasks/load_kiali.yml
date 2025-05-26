@@ -1,0 +1,31 @@
+---
+- name: copy yaml to master
+  template:
+    src: kiali.yaml.j2
+    dest: /tmp/kiali.yaml
+  delegate_to: localhost
+
+- name: copy yaml to master
+  template:
+    src: prometheus.yaml.j2
+    dest: /tmp/prometheus.yaml
+  delegate_to: localhost
+
+- name: login harbor hub
+  command: "sealos login -u admin -p {{ harborAdminPassword }} {{ hostCoreName }}"
+
+- name: load images
+  shell: >
+    sealos load -i {{ playbook_dir }}/offline_pkgs/images/{{ item[0] }}.tar &&
+    sealos push {{ item[1] }} harbor.joiningos.com/joiningos/{{ item[0] }}:{{ item[2] }}
+  loop:
+  - ["kiali", "quay.io/kiali/kiali:dev", "dev"]
+  - ["prometheus-2.54.1", "docker.io/prom/prometheus:v2.54.1", "v2.54.1"]
+  - ["prometheus-config-reloader", "ghcr.io/prometheus-operator/prometheus-config-reloader:v0.76.0", "v0.76.0"]
+
+- name: apply kiali
+  shell: >
+    kubectl apply -f /tmp/{{ item }} -n istio-system
+  with_items:
+  - kiali.yaml
+  - prometheus.yaml

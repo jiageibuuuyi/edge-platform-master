@@ -1,0 +1,5 @@
+server = "https://harbor.joiningos.com"
+
+[host."https://harbor.joiningos.com"]
+  capabilities = ["pull", "resolve", "push"]
+  skip_verify = true

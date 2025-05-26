@@ -1,0 +1,5 @@
+- name: load images
+  shell: >
+    ctr -n k8s.io image import {{ playbook_dir }}/offline_pkgs/images/fluentd-bit.tar &&
+    ctr -n k8s.io image import {{ playbook_dir }}/offline_pkgs/images/grafana-promtail.tar &&
+    ctr -n k8s.io image import {{ playbook_dir }}/offline_pkgs/images/loki-2.9.3.tar

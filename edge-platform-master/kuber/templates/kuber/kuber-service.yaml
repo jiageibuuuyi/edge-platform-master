@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+# 根据实际环境修改namespace
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.global.uuid }}-kuber
+  name: {{ .Values.global.uuid }}-kuber
+spec:
+  selector:
+# app的值需要是gateway-server-deployment.yaml中metadata.labels.app的值
+    svc: {{ .Values.global.uuid }}-kuber
+  ports:
+    - name: http-0
+      protocol: TCP
+      targetPort: 11468
+      port: 11468
+      nodePort: 31468
+  type: NodePort

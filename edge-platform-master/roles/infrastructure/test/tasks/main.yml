@@ -1,0 +1,35 @@
+# License: Apache-2.0
+
+---
+
+
+# - name: test module
+#   uri:
+#     url: https://harbor.joiningos.com/api/v2.0/projects
+#     user: "admin"
+#     password: "P@88w0rd"
+#     method: POST
+#     body: "{{ item }}"
+#     body_format: json
+#     validate_certs: no
+#     force_basic_auth: true
+#     status_code: [201, 409]
+#     headers:
+#       Content-Type: "application/json"
+#   register: response
+#   with_items:
+#   - '{"project_name":"joiningos", "public": true}'
+#   - '{"project_name":"lowcode", "public": true}'
+
+# - name: debug
+#   debug:
+#     msg: "{{ response }}"
+- name: debug
+  debug:
+    msg: "{{ groups['all'] | length }} {{ groups['all'] }}"
+
+- name: Generate script from template
+  template:
+    src: "init_k8s.sh.j2"
+    dest: "/tmp/deploy-script.sh"
+    mode: '0755'

@@ -1,0 +1,8 @@
+# License: Apache-2.0
+
+---
+- name: Copy files to /usr/bin
+  copy:
+    src: "{{ playbook_dir }}/offline_pkgs/bin/jq"
+    dest: /usr/bin/
+    mode: '0755'

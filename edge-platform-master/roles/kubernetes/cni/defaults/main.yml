@@ -1,0 +1,14 @@
+# License: Apache-2.0
+
+---
+
+kubernetes_cnis: []
+
+# List of CNIs that user can use
+_available_kubernetes_cnis:
+- flannel
+- calico
+
+_cni_offline_path:
+- ./roles
+- ./ceek/roles

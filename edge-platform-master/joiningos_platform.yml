@@ -1,0 +1,35 @@
+# License: Apache-2.0
+
+---
+# Playbook for joiningOS platform deployment
+
+
+- hosts: controller_group
+  pre_tasks:
+    - name: set node name
+      set_fact: node_name={{ ansible_nodename | lower }}
+    - name: create helper variable
+      set_fact:
+        single_node_deployment={{ single_node }}
+
+  roles:
+    # - role: infrastructure/test
+    - role: infrastructure/os_setup
+
+    - role: infrastructure/time_setup_ntp
+      when: ntp_enable | default(False)
+    #- role: infrastructure/docker
+    - role: kubernetes/helm
+    - role: kubernetes/controlplane
+    - role: kubernetes/harbor_registry/controlplane
+
+- hosts: controller_group
+  roles:
+    - role: applications/kuber
+    - role: applications/istio
+    - role: applications/prometheus
+
+- hosts: edgenode_group
+  roles:
+    - role: infrastructure/os_setup
+    - role: kubernetes/node

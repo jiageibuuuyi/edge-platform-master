@@ -1,0 +1,36 @@
+# License: Apache-2.0
+
+---
+- name: check if cluster exists
+  command: kubectl cluster-info
+  ignore_errors: yes
+  register: cluster_info
+  changed_when: false
+
+- name: initialize cluster
+  block:
+  - name: Create deploy directory
+    file:
+      path: "/tmp/k8s_{{ ansible_date_time.epoch }}"
+      state: directory
+      mode: '0755'
+    register: deploy_dir
+  - name: Generate script from template
+    template:
+      src: "init_k8s.sh.j2"
+      dest: "{{ deploy_dir.path }}/deploy-script.sh"
+      mode: '0755'
+  - name: Run the deploy k8s script
+    command: "bash {{ deploy_dir.path }}/deploy-script.sh"
+    become: yes
+  when: cluster_info.rc != 0
+
+- name: Wait till k8s master starts
+  shell: >
+    kubectl get nodes {{ node_name }} --no-headers | awk '{print $2}'
+  args:
+  register: k8s_master_init_start
+  retries: 30
+  delay: 10
+  until: k8s_master_init_start.stdout == 'Ready'
+  changed_when: false

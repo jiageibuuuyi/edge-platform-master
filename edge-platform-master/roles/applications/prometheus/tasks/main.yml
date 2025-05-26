@@ -1,0 +1,10 @@
+
+- name: copy loki-stack to master
+  copy:
+    src: "{{ playbook_dir }}/offline_pkgs/charts/loki-stack-2.10.2.tgz"
+    dest: /tmp/
+    mode: '0755'
+
+- name: install loki
+  shell: >
+    helm install loki-stack /tmp/loki-stack-2.10.2.tgz --namespace loki-stack --create-namespace --set fluent-bit.enabled=true,promtail.enabled=true --set grafana.enabled=false

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+#指定mysql deployment配置文件name、namespace
+  labels:
+    app: {{ .Values.global.uuid }}-mysql-standalone
+  name: {{ .Values.global.uuid }}-monitor-mysql
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.global.uuid }}-mysql-standalone
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.global.uuid }}-mysql-standalone
+    spec:
+      containers:
+      - env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: zn123$%^zn
+#mysql拉取镜像配置
+        image: {{ .Values.image.grafana_mysql }}
+        imagePullPolicy: Always
+        name: mysql-standalone
+        ports:
+        - containerPort: 3306
+          protocol: TCP
+        resources:
+          limits:
+            cpu: '4'
+            memory: 4Gi
+          requests:
+            cpu: 10m
+            memory: 10Mi
+        volumeMounts:
+        - mountPath: /etc/localtime
+          name: timezone
+          readOnly: true
+        - mountPath: /var/lib/mysql
+          name: data
+          subPath: data/mysql
+        - name: mysql-config-map
+          mountPath: /docker-entrypoint-initdb.d/zend.sql
+          subPath: zend.sql
+        - name: mysql-config-map
+          mountPath: /etc/mysql/conf.d/my.cnf
+          subPath: my.cnf
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /etc/localtime
+        name: timezone
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.global.uuid }}-standalone-pvc
+      - name: mysql-config-map
+        configMap:
+          name: {{ .Values.global.uuid }}-mysql-configmap

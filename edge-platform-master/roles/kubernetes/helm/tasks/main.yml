@@ -1,0 +1,9 @@
+# License: Apache-2.0
+
+---
+- name: Copy tar file to remote
+  copy:
+    src: "{{ playbook_dir }}/offline_pkgs/bin/helm"
+    dest: /usr/bin/
+    mode: '0755'
+  become: yes
